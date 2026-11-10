@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bitácora de incidencias de producción</title>
+<meta name="theme-color" content="#A85A22">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Incidencias">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF2F4; --surface:#FFFFFF; --sunk:#E3E9ED; --ink:#1C2730; --muted:#5E6C77; --line:#CBD5DC;
+  --copper:#A85A22; --copper-ink:#FFFFFF; --copper-soft:#F5E6DA;
+  --s1:#4F7A52; --s2:#A27C12; --s3:#C0621B; --s4:#B3261E; --warn-bg:#FFF4DC; --warn-ink:#7A5200;
+  --ok-bg:#E3F1E4; --ok-ink:#2E5A31;
+  --font:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --cond:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12181D; --surface:#1A2229; --sunk:#232D35; --ink:#E3E9ED; --muted:#93A1AB; --line:#2F3B45;
+    --copper:#D88A4E; --copper-ink:#1A1108; --copper-soft:#3A2A1E;
+    --s1:#7FB383; --s2:#D9B24A; --s3:#E58A47; --s4:#EF6B60; --warn-bg:#3A2E12; --warn-ink:#F2CF7A;
+    --ok-bg:#1F3322; --ok-ink:#9FD4A3; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12181D; --surface:#1A2229; --sunk:#232D35; --ink:#E3E9ED; --muted:#93A1AB; --line:#2F3B45;
+  --copper:#D88A4E; --copper-ink:#1A1108; --copper-soft:#3A2A1E;
+  --s1:#7FB383; --s2:#D9B24A; --s3:#E58A47; --s4:#EF6B60; --warn-bg:#3A2E12; --warn-ink:#F2CF7A;
+  --ok-bg:#1F3322; --ok-ink:#9FD4A3; color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--copper);outline-offset:2px}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.brand{font-family:var(--cond);font-weight:700;font-size:1.5rem;letter-spacing:.01em;margin:0;line-height:1.1}
+.brand small{display:block;font-family:var(--font);font-weight:400;font-size:.8rem;color:var(--muted);letter-spacing:0}
+.monthsel{margin-left:auto;flex-direction:row;align-items:center;gap:8px}
+.monthsel select{width:auto;font-weight:600}
+.tabs{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:8px}
+.tabs button{border:0;background:transparent;padding:7px 14px;border-radius:6px;cursor:pointer;font-weight:600}
+.tabs button[aria-selected="true"]{background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+
+.gauges{max-width:1180px;margin:0 auto;padding:16px 20px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.gauge{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;cursor:pointer;text-align:left}
+.gauge b{display:block;font-family:var(--cond);font-size:2rem;line-height:1;font-weight:600}
+.gauge span{font-size:.85rem;color:var(--muted)}
+.gauge.alert b{color:var(--copper)}
+
+main{max-width:1180px;margin:0 auto;padding:16px 20px 60px}
+.view[hidden]{display:none}
+
+/* Formulario */
+form{display:grid;gap:18px}
+fieldset{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:16px 18px 18px;margin:0;min-width:0}
+legend{font-family:var(--cond);font-weight:600;font-size:1.2rem;padding:0 6px}
+.grid{display:grid;gap:12px 16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;font-weight:500}
+label .hint{font-weight:400;color:var(--muted);font-size:.8rem}
+input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:64px}
+input[readonly]{background:var(--sunk);color:var(--muted)}
+.req::after{content:" *";color:var(--copper)}
+.formhead{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between}
+.formhead h2{font-family:var(--cond);font-size:1.8rem;margin:0;font-weight:700}
+.folio{font-family:var(--cond);color:var(--copper);font-size:1.3rem;font-weight:600}
+
+.sevgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.sev{position:relative;border:1px solid var(--line);border-radius:8px;padding:10px 12px 10px 16px;cursor:pointer;background:var(--bg);display:block;font-weight:400}
+.sev::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:8px 0 0 8px;background:var(--c)}
+.sev input{position:absolute;opacity:0;pointer-events:none}
+.sev strong{font-family:var(--cond);font-size:1.1rem;display:block}
+.sev p{margin:2px 0 0;font-size:.8rem;color:var(--muted)}
+.sev:has(input:checked){border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c);background:var(--surface)}
+.sev:has(input:focus-visible){outline:2px solid var(--copper);outline-offset:2px}
+
+/* Escalera de porqués: tubería de cobre */
+.why-intro{margin:0 0 12px;color:var(--muted);font-size:.9rem;max-width:70ch}
+.chain{list-style:none;margin:0;padding:0;position:relative}
+.chain li{position:relative;padding-left:46px;padding-bottom:12px}
+.chain li::before{content:"";position:absolute;left:15px;top:30px;bottom:-2px;width:4px;background:var(--copper);opacity:.45;border-radius:2px}
+.chain li:last-child::before{display:none}
+.node{position:absolute;left:0;top:2px;width:34px;height:34px;border-radius:50%;background:var(--copper-soft);border:2px solid var(--copper);display:grid;place-items:center;font-family:var(--cond);font-weight:700;color:var(--copper)}
+.chain label{font-weight:500}
+.chain-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.verdict{margin-top:12px;border-radius:8px;padding:10px 14px;font-size:.9rem}
+.verdict.warn{background:var(--warn-bg);color:var(--warn-ink)}
+.verdict.ok{background:var(--ok-bg);color:var(--ok-ink)}
+.verdict ul{margin:6px 0 0;padding-left:20px}
+.verdict:empty{display:none}
+
+.check{flex-direction:row;align-items:center;gap:8px;font-weight:500}
+.check input{width:auto}
+
+.bar{position:sticky;bottom:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:env(safe-area-inset-bottom,0px)}
+.bar .msg{margin-right:auto;font-size:.9rem;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 16px;border-radius:6px;cursor:pointer;font-weight:600}
+.btn.primary{background:var(--copper);border-color:var(--copper);color:var(--copper-ink)}
+.btn.small{padding:5px 10px;font-size:.85rem}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+
+/* Bitácora */
+.filters{display:grid;gap:10px;grid-template-columns:2fr repeat(3,1fr) auto;align-items:end;margin-bottom:14px}
+@media (max-width:820px){.filters{grid-template-columns:1fr 1fr}.filters .search{grid-column:1/-1}}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--cond);font-weight:600;font-size:.95rem;color:var(--muted);background:var(--sunk);white-space:nowrap;cursor:pointer;user-select:none}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--bg)}
+tbody tr:last-child td{border-bottom:0}
+td.desc{min-width:260px;max-width:420px}
+td.desc span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.78rem;font-weight:600;white-space:nowrap;border:1px solid currentColor}
+.st-PENDIENTE{color:var(--s4)}
+.st-EN-PROGRESO{color:var(--s2)}
+.st-RESUELTA{color:var(--s1)}
+.sevdot{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.sevdot::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--c)}
+.mes{display:block;font-size:.78rem;color:var(--muted)}
+td.folio-c,td.fecha-c{white-space:nowrap}
+.flag{display:block;margin-top:5px;color:var(--copper);font-weight:600;font-size:.75rem;line-height:1.2}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.listfoot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-top:12px;color:var(--muted);font-size:.9rem}
+.notice{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.notice[hidden]{display:none}
+dialog.confirm{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:22px 22px 18px;width:min(440px,calc(100vw - 32px))}
+dialog.confirm::backdrop{background:rgba(10,16,20,.55)}
+dialog.confirm h3{font-family:var(--cond);font-size:1.4rem;margin:0 0 8px;font-weight:700}
+dialog.confirm p{margin:0 0 10px;color:var(--muted)}
+dialog.confirm ul{margin:0 0 12px;padding-left:20px;font-size:.92rem;max-height:40vh;overflow:auto}
+dialog.confirm .acts{display:flex;justify-content:flex-end;gap:10px;margin-top:8px}
+@media (prefers-reduced-motion:no-preference){.verdict{animation:in .25s ease-out}@keyframes in{from{opacity:0;transform:translateY(-4px)}}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <h1 class="brand">Bitácora de incidencias<small>Producción · Ingeniería mecánica y eléctrica · Versión 3 · GitHub</small></h1>
+    <label class="monthsel">Mes<select id="fmes"></select></label>
+    <button class="btn small" id="reload" title="Volver a leer los datos de GitHub">Actualizar</button>
+    <button class="btn small" id="cfgbtn" title="Configurar conexión con GitHub">Conexión</button>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-nueva" aria-selected="true" data-view="nueva">Registrar</button>
+      <button role="tab" id="tab-bitacora" aria-selected="false" data-view="bitacora">Bitácora</button>
+    </nav>
+  </div>
+</header>
+
+<section class="gauges" aria-label="Resumen">
+  <button class="gauge" data-filter-st="PENDIENTE"><b id="g-pend">–</b><span>Pendientes</span></button>
+  <button class="gauge" data-filter-st="EN PROGRESO"><b id="g-prog">–</b><span>En progreso</span></button>
+  <button class="gauge" data-filter-st="RESUELTA"><b id="g-res">–</b><span>Resueltas</span></button>
+  <button class="gauge alert" data-filter-flag="1"><b id="g-gen">–</b><span>Causa raíz por precisar</span></button>
+</section>
+
+<main>
+  <div id="dbnotice" class="notice" hidden></div>
+
+  <!-- REGISTRO -->
+  <section class="view" id="view-nueva">
+    <form id="f" novalidate>
+      <div class="formhead">
+        <h2 id="ftitle">Nueva incidencia</h2>
+        <span class="folio" id="ffolio"></span>
+      </div>
+
+      <fieldset>
+        <legend>Unidad y proyecto</legend>
+        <div class="grid">
+          <label><span class="req">No. trabajo</span><input name="noTrabajo" list="dl-trabajo" required placeholder="TM1301"></label>
+          <label><span class="req">Modelo de la unidad</span><input name="modelo" list="dl-modelo" required></label>
+          <label><span class="req">Ingeniero encargado del proyecto</span>
+            <select name="ingeniero" required id="sel-ing"></select></label>
+          <label>Revisión de planos / diagrama / listado<input name="plano" list="dl-plano" placeholder="PLUC-…-R0 o N/A"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Incidencia</legend>
+        <div class="grid">
+          <label><span class="req">Proceso de fabricación</span><select name="proceso" required id="sel-proc"></select></label>
+          <label><span class="req">Departamento responsable (origen)</span><select name="depto" required id="sel-depto"></select></label>
+          <label><span class="req">Fecha y hora de detección</span><input type="datetime-local" name="fechaDeteccion" required></label>
+          <label>Estatus<select name="estatus" id="sel-st"><option>PENDIENTE</option><option>EN PROGRESO</option><option>RESUELTA</option></select></label>
+          <label class="full"><span class="req">Descripción de la incidencia</span>
+            <span class="hint">Qué se encontró, dónde y en qué componente. Evita "no funciona" sin detalle.</span>
+            <textarea name="descripcion" required rows="3"></textarea></label>
+        </div>
+        <p style="margin:16px 0 8px;font-weight:500" class="req">Gravedad / impacto</p>
+        <div class="sevgrid" id="sevgrid"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Causa raíz · 5 porqués</legend>
+        <p class="why-intro">Cada respuesta se convierte en la pregunta del siguiente nivel. Detente cuando llegues a algo que se pueda corregir con una acción concreta (un plano, un procedimiento, un punto de control). El último porqué se toma como causa raíz.</p>
+        <ol class="chain" id="chain"></ol>
+        <div class="chain-actions">
+          <button type="button" class="btn small" id="addwhy">Agregar otro porqué</button>
+        </div>
+        <div class="verdict" id="verdict" aria-live="polite"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Acciones</legend>
+        <div class="grid">
+          <label class="full">Acción de contención<span class="hint">Lo que se hizo de inmediato para frenar el impacto.</span><textarea name="contencion" rows="2"></textarea></label>
+          <label class="full">Acción correctiva<span class="hint">Lo que evita que vuelva a pasar (cambio de plano, IT, punto de revisión…).</span><textarea name="correctiva" rows="2"></textarea></label>
+          <label>Responsable de la acción<input name="respAccion"></label>
+          <label>Fecha compromiso<input type="date" name="fechaCompromiso"></label>
+          <label>Fecha de cierre<input type="date" name="fechaCierre"><span class="hint">Se llena sola al marcar RESUELTA.</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Impacto</legend>
+        <div class="grid">
+          <label class="check"><input type="checkbox" name="paro"> Hubo paro de producción</label>
+          <label class="check"><input type="checkbox" name="cambioIng"> Requiere cambio de ingeniería / desviación</label>
+          <label>Downtime (min)<input type="number" min="0" step="1" name="downtimeMin" inputmode="numeric"></label>
+          <label>Retrabajo (min)<input type="number" min="0" step="1" name="retrabajoMin" inputmode="numeric"></label>
+        </div>
+      </fieldset>
+
+      <div class="bar">
+        <span class="msg" id="fmsg">Los campos con * son obligatorios.</span>
+        <button type="button" class="btn" id="fcancel">Limpiar</button>
+        <button type="submit" class="btn primary" id="fsave">Guardar incidencia</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- BITÁCORA -->
+  <section class="view" id="view-bitacora" hidden>
+    <div class="filters">
+      <label class="search">Buscar<input id="q" type="search" placeholder="Folio, trabajo, modelo, descripción…"></label>
+      <label>Estatus<select id="fst"><option value="">Todos</option><option>PENDIENTE</option><option>EN PROGRESO</option><option>RESUELTA</option></select></label>
+      <label>Gravedad<select id="fsev"><option value="">Todas</option></select></label>
+      <label>Ingeniero<select id="fing"><option value="">Todos</option></select></label>
+      <label class="check" style="padding-bottom:8px"><input type="checkbox" id="fflag"> Causa por precisar</label>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th data-sort="folio">Folio</th><th data-sort="estatus">Estatus</th><th data-sort="noTrabajo">Trabajo</th>
+          <th data-sort="proceso">Proceso</th><th>Descripción</th><th data-sort="depto">Origen</th>
+          <th data-sort="gravedadN">Gravedad</th><th data-sort="ingeniero">Ingeniero</th><th data-sort="fechaDeteccion">Detección</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden></div>
+    </div>
+    <div class="listfoot">
+      <span id="count"></span>
+      <button class="btn" id="export">Descargar CSV para Excel</button>
+    </div>
+  </section>
+</main>
+
+<dialog class="confirm" id="dlg" aria-labelledby="dlg-t">
+  <h3 id="dlg-t"></h3>
+  <p id="dlg-m"></p>
+  <ul id="dlg-l" hidden></ul>
+  <div class="acts"><button type="button" class="btn" id="dlg-no">Seguir editando</button><button type="button" class="btn primary" id="dlg-ok"></button></div>
+</dialog>
+<dialog class="confirm" id="cfg" aria-labelledby="cfg-t">
+  <h3 id="cfg-t">Conexión con GitHub</h3>
+  <p>Los datos se guardan en tu repositorio privado. El token se queda solo en este dispositivo.</p>
+  <div class="grid" style="grid-template-columns:1fr">
+    <label>Usuario u organización<input id="c-owner" autocomplete="off" autocapitalize="off" placeholder="tu-usuario"></label>
+    <label>Repositorio de datos<input id="c-repo" autocomplete="off" autocapitalize="off" placeholder="bitacora-datos"></label>
+    <label>Rama<input id="c-branch" autocomplete="off" autocapitalize="off" placeholder="main"></label>
+    <label>Token (fine-grained)<input id="c-token" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+  </div>
+  <p id="c-msg" style="margin-top:10px"></p>
+  <div class="acts"><button type="button" class="btn" id="c-close">Cerrar</button><button type="button" class="btn primary" id="c-save">Probar y guardar</button></div>
+</dialog>
+<datalist id="dl-trabajo"></datalist><datalist id="dl-modelo"></datalist><datalist id="dl-plano"></datalist>
+
+<script>
+(function(){
+const ING=["Andres Padilla","Daniel Valenzuela","Gabriel Félix","Iván Encinas","Jesus Roldan","Manuel Tamayo","Omar Gonzalez"];
+const PROC=["Chasis/Estructura","Soldadura Especial","Trazado de Tuberías","Montaje de Componentes","Instalación de Housing","Interconexión","Tablero Eléctrico","Pruebas Eléctricas","Pruebas de Hermeticidad","Embalaje","Otro"];
+const DEPTO=["Ingeniería mecánica","Ingeniería eléctrica","Automatización y control","Almacén","Calidad","Supply chain","Proveedor","Planeación","Producción","Ventas"];
+const SEV=[
+ {v:"Menor",n:1,label:"Menor",c:"--s1",d:"Sin paro. Sin cambio de plano; error simple o faltante común en almacén."},
+ {v:"Moderada",n:2,label:"Moderada",c:"--s2",d:"Retraso leve, resolución < 1 h. Retrabajo simple o aclaración de plano."},
+ {v:"Mayor",n:3,label:"Mayor",c:"--s3",d:"Paro parcial de la unidad. Retrabajo mayor o cambio de ingeniería oficial."},
+ {v:"Critica",n:4,label:"Crítica",c:"--s4",d:"Paro total por días. Error de diseño de fondo o material de importación."}
+];
+const SEVN=Object.fromEntries(SEV.map(s=>[s.v,s]));
+const GENERIC=[/^falta de (revisi[oó]n|supervisi[oó]n|seguimiento|comunicaci[oó]n|atenci[oó]n|cuidado|capacitaci[oó]n|control|verificaci[oó]n)\b[^,;]{0,25}\.?$/i,/^(error|falla) humana?\.?$/i,/^descuido\.?$/i,/^no se (revis[oó]|verific[oó]|supervis[oó])\.?$/i,/^(desconocid[oa]|n\/?a|sin causa)\.?$/i];
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const f=$("#f");
+let cfg=null;
+try{cfg=JSON.parse(localStorage.getItem("bitacora_gh")||"null");}catch(e){cfg=null;}
+const curMes=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`})();
+let selMes=curMes;
+let all=[], editing=null, sortKey="folio", sortDir=-1, canWrite=true, loaded=false;
+
+/* ---------- catálogos ---------- */
+const fillSel=(el,arr,ph)=>{el.innerHTML=(ph?`<option value="">${ph}</option>`:"")+arr.map(x=>`<option>${x}</option>`).join("")};
+fillSel($("#sel-ing"),ING,"Selecciona…"); fillSel($("#sel-proc"),PROC,"Selecciona…"); fillSel($("#sel-depto"),DEPTO,"Selecciona…");
+$("#fsev").innerHTML+=SEV.map(s=>`<option value="${s.v}">${s.label}</option>`).join("");
+$("#fing").innerHTML+=ING.map(x=>`<option>${x}</option>`).join("");
+$("#sevgrid").innerHTML=SEV.map(s=>`<label class="sev" style="--c:var(${s.c})"><input type="radio" name="gravedad" value="${s.v}"><strong>${s.label}</strong><p>${s.d}</p></label>`).join("");
+
+/* ---------- porqués ---------- */
+function whyRow(i,val){
+  const li=document.createElement("li");
+  li.innerHTML=`<span class="node" aria-hidden="true">${i}</span><label>${i===1?"¿Por qué ocurrió la incidencia?":"¿Por qué ocurrió eso?"}<textarea name="why" rows="2"></textarea></label>`;
+  li.querySelector("textarea").value=val||"";
+  return li;
+}
+function setWhys(arr){
+  const ch=$("#chain"); ch.innerHTML="";
+  const list=(arr&&arr.length?arr:[""]).slice(0,5);
+  while(list.length<3) list.push("");
+  list.forEach((v,i)=>ch.appendChild(whyRow(i+1,v)));
+  $("#addwhy").hidden=list.length>=5;
+}
+$("#addwhy").onclick=()=>{const n=$$("#chain li").length; if(n<5){$("#chain").appendChild(whyRow(n+1,"")); $$("#chain textarea")[n].focus();} $("#addwhy").hidden=$$("#chain li").length>=5;};
+const getWhys=()=>{const v=$$("#chain textarea").map(t=>t.value.trim()); while(v.length&&!v[v.length-1]) v.pop(); return v;};
+
+function rootIssues(whys){
+  const w=(whys||[]).filter(Boolean), out=[];
+  if(!w.length){out.push("No hay ningún porqué capturado."); return out;}
+  const last=w[w.length-1];
+  if(GENERIC.some(r=>r.test(last))) out.push(`"${last}" es una etiqueta genérica: no dice qué faltó revisar, en qué documento ni por qué no se detectó.`);
+  else if(last.length<25) out.push("La causa raíz es muy corta para ser accionable.");
+  if(w.length<2) out.push("Solo hay un nivel de porqué; normalmente describe el síntoma, no la causa.");
+  return out;
+}
+function showLocalVerdict(){
+  const iss=rootIssues(getWhys()), v=$("#verdict");
+  if(!getWhys().length){v.className="verdict";v.innerHTML="";return;}
+  if(iss.length){v.className="verdict warn";v.innerHTML=`<strong>Causa raíz por precisar</strong><ul>${iss.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;}
+  else {v.className="verdict ok";v.innerHTML="<strong>La causa raíz tiene el detalle mínimo.</strong> Verifica que la acción correctiva ataque este último porqué.";}
+}
+$("#chain").addEventListener("change",showLocalVerdict);
+
+/* ---------- utilidades ---------- */
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+const pad=n=>String(n).padStart(2,"0");
+const nowLocal=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const today=()=>nowLocal().slice(0,10);
+const folioNum=s=>parseInt(String(s||"").replace(/\D/g,""),10)||0;
+const mesOf=s=>(s||"").slice(0,7)||curMes;
+const mesLabel=m=>{const [y,mm]=(m||"").split("-").map(Number);return y?new Date(y,mm-1,1).toLocaleDateString("es-MX",{month:"long",year:"numeric"}):""};
+const mesTitle=m=>{const s=mesLabel(m);return s.charAt(0).toUpperCase()+s.slice(1)};
+const nextFolio=m=>"REP-"+String(Math.max(0,...all.filter(r=>r.mes===m).map(r=>folioNum(r.folio)))+1).padStart(5,"0");
+const showNewFolio=()=>{const m=mesOf(f.fechaDeteccion.value);$("#ffolio").textContent=loaded?`${nextFolio(m)} · ${mesTitle(m)}`:"";};
+function fillMonths(){
+  const ms=[...new Set([curMes,...all.map(r=>r.mes).filter(Boolean)])].sort().reverse();
+  $("#fmes").innerHTML=ms.map(m=>`<option value="${m}">${mesTitle(m)}</option>`).join("")+`<option value="">Todos los meses</option>`;
+  $("#fmes").value=selMes;
+}
+$("#fmes").addEventListener("change",()=>{selMes=$("#fmes").value;renderGauges();renderList();});
+const fmtDate=s=>{if(!s)return"";const d=new Date(s.length<=10?s+"T00:00":s);return isNaN(d)?s:d.toLocaleDateString("es-MX",{day:"2-digit",month:"short",year:"2-digit"})};
+
+/* ---------- formulario ---------- */
+function resetForm(){
+  editing=null; f.reset(); setWhys([]); $("#verdict").className="verdict"; $("#verdict").innerHTML="";
+  f.fechaDeteccion.value=nowLocal(); f.estatus.value="PENDIENTE";
+  $("#ftitle").textContent="Nueva incidencia"; showNewFolio();
+  $("#fsave").textContent="Guardar incidencia"; $("#fcancel").textContent="Limpiar"; $("#fmsg").textContent="Los campos con * son obligatorios.";
+}
+function loadForm(r){
+  editing=r._id; f.reset();
+  for(const k of ["noTrabajo","modelo","ingeniero","plano","proceso","depto","fechaDeteccion","estatus","descripcion","contencion","correctiva","respAccion","fechaCompromiso","fechaCierre","downtimeMin","retrabajoMin"]) if(f[k]) f[k].value=r[k]??"";
+  f.paro.checked=!!r.paro; f.cambioIng.checked=!!r.cambioIng;
+  const g=f.querySelector(`input[name=gravedad][value="${r.gravedad}"]`); if(g) g.checked=true;
+  setWhys(r.porques||[]); showLocalVerdict();
+  $("#ftitle").textContent="Editar incidencia"; $("#ffolio").textContent=`${r.folio} · ${mesTitle(r.mes)}`;
+  $("#fsave").textContent="Guardar cambios"; $("#fcancel").textContent="Cancelar"; $("#fmsg").textContent=r.actualizado?`Última actualización: ${fmtDate(r.actualizado)}`:"";
+  show("nueva"); window.scrollTo({top:0});
+}
+f.fechaDeteccion.addEventListener("change",()=>{ if(!editing) showNewFolio(); });
+f.estatus.addEventListener("change",()=>{ if(f.estatus.value==="RESUELTA"&&!f.fechaCierre.value) f.fechaCierre.value=today(); });
+function askConfirm(title,msg,ok,items){
+  const d=$("#dlg"); $("#dlg-t").textContent=title; $("#dlg-m").textContent=msg; $("#dlg-ok").textContent=ok;
+  const l=$("#dlg-l"); l.hidden=!(items&&items.length); l.innerHTML=(items||[]).map(x=>`<li>${esc(x)}</li>`).join("");
+  return new Promise(res=>{
+    const done=v=>{d.close(); $("#dlg-ok").onclick=$("#dlg-no").onclick=d.oncancel=null; res(v);};
+    $("#dlg-ok").onclick=()=>done(true); $("#dlg-no").onclick=()=>done(false); d.oncancel=e=>{e.preventDefault();done(false);};
+    d.showModal(); $("#dlg-no").focus();
+  });
+}
+const LABELS={noTrabajo:"No. trabajo",modelo:"Modelo",ingeniero:"Ingeniero",plano:"Revisión de planos",proceso:"Proceso",depto:"Departamento",fechaDeteccion:"Fecha de detección",estatus:"Estatus",descripcion:"Descripción",gravedad:"Gravedad",porques:"Porqués",contencion:"Acción de contención",correctiva:"Acción correctiva",respAccion:"Responsable de la acción",fechaCompromiso:"Fecha compromiso",fechaCierre:"Fecha de cierre",paro:"Paro de producción",cambioIng:"Cambio de ingeniería",downtimeMin:"Downtime",retrabajoMin:"Retrabajo"};
+const changedFields=(prev,r)=>Object.keys(LABELS).filter(k=>JSON.stringify(prev[k]??"")!==JSON.stringify(r[k]??"")&&!(prev[k]==null&&(r[k]===""||r[k]===false||r[k]===null))&&!(r[k]==null&&(prev[k]===""||prev[k]===false))).map(k=>k==="estatus"?`Estatus: ${prev.estatus||"—"} → ${r.estatus}`:LABELS[k]);
+$("#fcancel").onclick=async()=>{
+  if(editing){ resetForm(); show("bitacora"); renderList(); return; }
+  if(await askConfirm("¿Limpiar el formulario?","Se borrará lo que llevas capturado.","Limpiar")) resetForm();
+};
+
+function readForm(){
+  const num=v=>v===""?null:Number(v);
+  return {
+    noTrabajo:f.noTrabajo.value.trim().toUpperCase(), modelo:f.modelo.value.trim(), ingeniero:f.ingeniero.value, plano:f.plano.value.trim(),
+    proceso:f.proceso.value, depto:f.depto.value, fechaDeteccion:f.fechaDeteccion.value, estatus:f.estatus.value,
+    descripcion:f.descripcion.value.trim(), gravedad:(f.querySelector("input[name=gravedad]:checked")||{}).value||"",
+    porques:getWhys(), contencion:f.contencion.value.trim(), correctiva:f.correctiva.value.trim(), respAccion:f.respAccion.value.trim(),
+    fechaCompromiso:f.fechaCompromiso.value, fechaCierre:f.fechaCierre.value, paro:f.paro.checked, cambioIng:f.cambioIng.checked,
+    downtimeMin:num(f.downtimeMin.value), retrabajoMin:num(f.retrabajoMin.value)
+  };
+}
+f.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const r=readForm(), miss=[], soft=[];
+  if(!r.noTrabajo)miss.push("No. trabajo"); if(!r.modelo)miss.push("modelo"); if(!r.ingeniero)miss.push("ingeniero");
+  if(!r.proceso)miss.push("proceso"); if(!r.depto)miss.push("departamento");
+  if(!r.fechaDeteccion)(editing?soft:miss).push("fecha de detección");
+  if(!r.descripcion)miss.push("descripción"); if(!r.gravedad)miss.push("gravedad"); if(!r.porques.length)miss.push("al menos un porqué");
+  if(r.estatus==="RESUELTA"&&!r.correctiva)(editing?soft:miss).push("acción correctiva (requerida para RESUELTA)");
+  if(miss.length){$("#fmsg").textContent="Falta: "+miss.join(", ")+"."; return;}
+  if(!cfg){$("#fmsg").textContent="Configura la conexión con GitHub antes de guardar."; openCfg(); return;}
+  if(editing){
+    const p=all.find(x=>x._id===editing)||{}, ch=changedFields(p,r);
+    if(!ch.length){$("#fmsg").textContent="No hay cambios que guardar."; return;}
+    const items=[...ch,...soft.map(x=>"⚠ Queda sin capturar: "+x)];
+    if(!await askConfirm(`¿Estás seguro de guardar los cambios en ${p.folio}?`,`Se modificará la incidencia de ${mesLabel(p.mes)}. Revisa lo que cambia${soft.length?" y lo que sigue pendiente":""}:`,"Sí, guardar cambios",items)){$("#fmsg").textContent="No se guardó; sigues editando."; return;}
+  } else {
+    const m=mesOf(r.fechaDeteccion);
+    if(!await askConfirm("¿Estás seguro de guardar esta incidencia?",`Se registrará como ${nextFolio(m)} de ${mesLabel(m)}. Después de guardar, el folio ya no cambia.`,"Sí, guardar incidencia")){$("#fmsg").textContent="No se guardó; sigues capturando."; return;}
+  }
+  if(r.estatus==="RESUELTA"&&!r.fechaCierre) r.fechaCierre=today();
+  const btn=$("#fsave"); btn.disabled=true; $("#fmsg").textContent="Guardando…";
+  try{
+    const stamp=new Date().toISOString();
+    if(editing){
+      const {_id,...prev}=all.find(x=>x._id===editing)||{};
+      await saveRecord(prev.mes,arr=>{const i=arr.findIndex(x=>x.folio===prev.folio); const rec={...(i>=0?arr[i]:prev),...r,folio:prev.folio,mes:prev.mes,actualizado:stamp}; if(i>=0)arr[i]=rec; else arr.push(rec); return rec;},`Editar ${prev.folio} (${prev.mes})`);
+      $("#fmsg").textContent=`${prev.folio} (${mesLabel(prev.mes)}) actualizada en GitHub.`;
+    } else {
+      const mes=mesOf(r.fechaDeteccion); let folio="";
+      await saveRecord(mes,arr=>{folio="REP-"+String(Math.max(0,...arr.map(x=>folioNum(x.folio)))+1).padStart(5,"0"); const rec={...r,folio,mes,creado:stamp,actualizado:stamp}; arr.push(rec); return rec;},m=>`Nueva incidencia ${folio} (${mes})`);
+      const flagged=rootIssues(r.porques).length>0;
+      resetForm();
+      $("#fmsg").textContent=`${folio} de ${mesLabel(mes)} guardada en GitHub.`+(flagged?" Quedó marcada con causa raíz por precisar.":"");
+    }
+  }catch(err){
+    $("#fmsg").textContent=ghErrMsg(err,"No se guardó");
+  }finally{btn.disabled=false;}
+});
+
+/* ---------- bitácora ---------- */
+function filtered(){
+  const q=$("#q").value.trim().toLowerCase(), st=$("#fst").value, sv=$("#fsev").value, ing=$("#fing").value, fl=$("#fflag").checked;
+  const kv=(r,k)=>k==="gravedadN"?(SEVN[r.gravedad]||{}).n||0:k==="folio"?`${r.mes}_${r.folio}`:r[k]??"";
+  return all.filter(r=>(!selMes||r.mes===selMes)&&(!st||r.estatus===st)&&(!sv||r.gravedad===sv)&&(!ing||r.ingeniero===ing)&&(!fl||rootIssues(r.porques).length)&&
+    (!q||[r.folio,r.noTrabajo,r.modelo,r.descripcion,r.proceso,r.depto,...(r.porques||[])].join(" ").toLowerCase().includes(q)))
+   .sort((a,b)=>{const x=kv(a,sortKey), y=kv(b,sortKey); return (x>y?1:x<y?-1:0)*sortDir;});
+}
+function renderList(){
+  const list=filtered(), tb=$("#rows");
+  tb.innerHTML=list.map(r=>{const s=SEVN[r.gravedad]; const fl=rootIssues(r.porques).length;
+    return `<tr data-id="${esc(r._id)}" tabindex="0"><td class="folio-c"><strong>${esc(r.folio)}</strong>${selMes?"":`<span class="mes">${esc(mesTitle(r.mes))}</span>`}</td>
+    <td><span class="pill st-${esc((r.estatus||"").replace(" ","-"))}">${esc(r.estatus)}</span>${fl?'<span class="flag">Causa por precisar</span>':""}</td>
+    <td>${esc(r.noTrabajo)}</td><td>${esc(r.proceso)}</td><td class="desc"><span>${esc(r.descripcion)}</span></td><td>${esc(r.depto)}</td>
+    <td>${s?`<span class="sevdot" style="--c:var(${s.c})">${s.label}</span>`:esc(r.gravedad)}</td><td>${esc(r.ingeniero)}</td>
+    <td class="fecha-c">${esc(fmtDate(r.fechaDeteccion))}</td></tr>`}).join("");
+  const em=$("#empty");
+  if(!loaded){em.hidden=false;em.textContent="Cargando incidencias…";}
+  else if(!all.length){em.hidden=false;em.textContent="Aún no hay incidencias. Registra la primera desde la pestaña Registrar.";}
+  else if(selMes&&!all.some(r=>r.mes===selMes)){em.hidden=false;em.textContent=`Sin incidencias en ${mesLabel(selMes)}. Registra la primera o elige otro mes arriba.`;}
+  else if(!list.length){em.hidden=false;em.textContent="Ninguna incidencia coincide con los filtros.";}
+  else em.hidden=true;
+  const base=selMes?all.filter(r=>r.mes===selMes).length:all.length;
+  $("#count").textContent=loaded?`${list.length} de ${base} incidencias${selMes?" en "+mesLabel(selMes):""}`:"";
+}
+$("#rows").addEventListener("click",e=>{const tr=e.target.closest("tr");if(tr)loadForm(all.find(r=>r._id===tr.dataset.id));});
+$("#rows").addEventListener("keydown",e=>{if(e.key==="Enter"){const tr=e.target.closest("tr");if(tr)loadForm(all.find(r=>r._id===tr.dataset.id));}});
+["#q","#fst","#fsev","#fing","#fflag"].forEach(s=>$(s).addEventListener("input",renderList));
+$$("th[data-sort]").forEach(th=>th.onclick=()=>{const k=th.dataset.sort; sortDir=sortKey===k?-sortDir:1; sortKey=k; renderList();});
+
+function renderGauges(){
+  const base=selMes?all.filter(r=>r.mes===selMes):all;
+  const c=st=>base.filter(r=>r.estatus===st).length;
+  $("#g-pend").textContent=c("PENDIENTE"); $("#g-prog").textContent=c("EN PROGRESO"); $("#g-res").textContent=c("RESUELTA");
+  $("#g-gen").textContent=base.filter(r=>rootIssues(r.porques).length).length;
+}
+$$(".gauge").forEach(g=>g.onclick=()=>{
+  $("#q").value=""; $("#fsev").value=""; $("#fing").value="";
+  $("#fst").value=g.dataset.filterSt||""; $("#fflag").checked=!!g.dataset.filterFlag; show("bitacora"); renderList();
+});
+function fillDatalists(){
+  const uniq=k=>[...new Set(all.map(r=>r[k]).filter(Boolean))].sort();
+  $("#dl-trabajo").innerHTML=uniq("noTrabajo").map(x=>`<option value="${esc(x)}">`).join("");
+  $("#dl-modelo").innerHTML=uniq("modelo").map(x=>`<option value="${esc(x)}">`).join("");
+  $("#dl-plano").innerHTML=uniq("plano").map(x=>`<option value="${esc(x)}">`).join("");
+}
+
+/* ---------- exportación CSV con columnas de la bitácora en Excel ---------- */
+function buildCSV(rows){
+  const cols=[["ESTATUS",r=>r.estatus],["ID DEL REPORTE",r=>r.folio],["No. TRABAJO",r=>r.noTrabajo],["MODELO DE  LA UNIDAD",r=>r.modelo],
+   ["INGENIERO ENCARGADO DEL PROYECTO",r=>r.ingeniero],["REVISIÓN DE PLANOS/DIAGRAMA/LISTADO ACTUAL",r=>r.plano],["PROCESO DE FABRICACION",r=>r.proceso],
+   ["DESCRIPCIÓN DE LA INCIDENCIA",r=>r.descripcion],["1.- ¿POR QUE?",r=>(r.porques||[])[0]],["DEPARTAMENTO RESPONSABLE (ORIGEN)",r=>r.depto],["GRAVEDAD/IMPACTO",r=>r.gravedad],["MES",r=>r.mes],
+   ["2.- ¿POR QUE?",r=>(r.porques||[])[1]],["3.- ¿POR QUE?",r=>(r.porques||[])[2]],["4.- ¿POR QUE?",r=>(r.porques||[])[3]],["5.- ¿POR QUE?",r=>(r.porques||[])[4]],
+   ["CAUSA RAÍZ",r=>(r.porques||[]).filter(Boolean).slice(-1)[0]],["CAUSA RAÍZ POR PRECISAR",r=>rootIssues(r.porques).length?"SI":"NO"],
+   ["ACCIÓN DE CONTENCIÓN",r=>r.contencion],["ACCIÓN CORRECTIVA",r=>r.correctiva],["RESPONSABLE ACCIÓN",r=>r.respAccion],["FECHA COMPROMISO",r=>r.fechaCompromiso],
+   ["FECHA DETECCIÓN",r=>(r.fechaDeteccion||"").replace("T"," ")],["FECHA CIERRE",r=>r.fechaCierre],["PARO DE PRODUCCIÓN",r=>r.paro?"SI":"NO"],
+   ["DOWNTIME (MIN)",r=>r.downtimeMin],["RETRABAJO (MIN)",r=>r.retrabajoMin],["CAMBIO DE INGENIERÍA",r=>r.cambioIng?"SI":"NO"]];
+  const q=v=>{v=v==null?"":String(v);return /[",\n;]/.test(v)?`"${v.replace(/"/g,'""')}"`:v};
+  rows=[...rows].sort((a,b)=>a.mes===b.mes?folioNum(a.folio)-folioNum(b.folio):(a.mes>b.mes?1:-1));
+  return "\uFEFF"+[cols.map(c=>q(c[0])).join(","),...rows.map(r=>cols.map(c=>q(c[1](r))).join(","))].join("\r\n");
+}
+$("#export").onclick=()=>{
+  const csv=buildCSV(all.filter(r=>!selMes||r.mes===selMes));
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download=`incidencias_${selMes||"todos"}.csv`; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+};
+
+/* ---------- navegación ---------- */
+function show(v){
+  $$(".view").forEach(x=>x.hidden=x.id!=="view-"+v);
+  $$(".tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.view===v)));
+  if(location.hash!=="#"+v) history.replaceState(null,"","#"+v);
+}
+$$(".tabs button").forEach(b=>b.onclick=()=>{ if(b.dataset.view==="nueva"&&editing) resetForm(); show(b.dataset.view); if(b.dataset.view==="bitacora")renderList(); });
+window.addEventListener("hashchange",()=>show(location.hash==="#bitacora"?"bitacora":"nueva"));
+
+/* ---------- arranque ---------- */
+resetForm(); show(location.hash==="#bitacora"?"bitacora":"nueva"); renderList();
+
+/* ---------- capa GitHub ---------- */
+const b64d=t=>new TextDecoder().decode(Uint8Array.from(atob(t.replace(/\s/g,"")),c=>c.charCodeAt(0)));
+const b64e=t=>{const by=new TextEncoder().encode(t);let bin="";for(let i=0;i<by.length;i+=0x8000)bin+=String.fromCharCode(...by.subarray(i,i+0x8000));return btoa(bin);};
+async function gh(path,opts={},c=cfg){
+  const res=await fetch(`https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}${path}`,{...opts,cache:"no-store",
+    headers:{"Accept":"application/vnd.github+json","Authorization":`Bearer ${c.token}`,"X-GitHub-Api-Version":"2022-11-28",...(opts.body?{"Content-Type":"application/json"}:{})}});
+  if(!res.ok){const e=new Error("HTTP "+res.status);e.status=res.status;try{e.body=await res.json();}catch(_){}throw e;}
+  return res.status===204?null:res.json();
+}
+function ghErrMsg(e,pre){
+  const s=e&&e.status;
+  if(!s) return `${pre}: sin conexión a internet o GitHub no responde.`;
+  if(s===401) return `${pre}: el token no es válido o ya caducó. Revisa Conexión.`;
+  if(s===403) return `${pre}: el token no tiene permiso de escritura en el repositorio (o se excedió el límite de GitHub).`;
+  if(s===404) return `${pre}: no se encontró el repositorio o la rama. Revisa Conexión.`;
+  if(s===409||s===422) return `${pre}: alguien guardó al mismo tiempo. Presiona Actualizar e intenta de nuevo.`;
+  return `${pre}: error de GitHub (${s}).`;
+}
+async function readJSON(path){
+  try{const j=await gh(`/contents/${path}?ref=${encodeURIComponent(cfg.branch)}`); return {data:JSON.parse(b64d(j.content)),sha:j.sha};}
+  catch(e){ if(e.status===404) return {data:null,sha:null}; throw e; }
+}
+async function shaOf(path){ try{return (await gh(`/contents/${path}?ref=${encodeURIComponent(cfg.branch)}`)).sha;}catch(e){if(e.status===404)return null;throw e;} }
+async function putFile(path,text,sha,message){
+  return gh(`/contents/${path}`,{method:"PUT",body:JSON.stringify({message,content:b64e(text),branch:cfg.branch,...(sha?{sha}:{})})});
+}
+/* Lee el mes fresco de GitHub, aplica el cambio, guarda el mes y regenera bitacora.csv */
+async function saveRecord(mes,mutate,msg){
+  for(let intento=0;intento<2;intento++){
+    const {data,sha}=await readJSON(`data/${mes}.json`);
+    const arr=Array.isArray(data)?data:[];
+    const rec=mutate(arr);
+    arr.sort((a,b)=>folioNum(a.folio)-folioNum(b.folio));
+    const message=typeof msg==="function"?msg():msg;
+    try{ await putFile(`data/${mes}.json`,JSON.stringify(arr,null,1)+"\n",sha,message); }
+    catch(e){ if((e.status===409||e.status===422)&&intento===0) continue; throw e; }
+    all=all.filter(x=>x.mes!==mes).concat(arr.map(x=>({...x,_id:`${x.mes}_${x.folio}`})));
+    afterData();
+    try{ const csvSha=await shaOf("bitacora.csv"); await putFile("bitacora.csv",buildCSV(all),csvSha,"Actualizar bitacora.csv"); }
+    catch(e){ console.warn("bitacora.csv no se actualizó",e); }
+    return rec;
+  }
+}
+async function loadAll(){
+  if(!cfg){ dbDown("Configura la conexión con GitHub (botón Conexión) para ver y guardar incidencias."); openCfg(); return; }
+  dbDown("Cargando incidencias desde GitHub…");
+  try{
+    let files=[];
+    try{ files=(await gh(`/contents/data?ref=${encodeURIComponent(cfg.branch)}`)).filter(f=>/^\d{4}-\d{2}\.json$/.test(f.name)); }
+    catch(e){ if(e.status!==404) throw e; }
+    const parts=await Promise.all(files.map(f=>readJSON(`data/${f.name}`)));
+    all=parts.flatMap(p=>Array.isArray(p.data)?p.data:[]).map(x=>({...x,_id:`${x.mes}_${x.folio}`}));
+    loaded=true; $("#dbnotice").hidden=true; afterData();
+  }catch(e){ dbDown(ghErrMsg(e,"No se pudo cargar la bitácora")); }
+}
+function afterData(){ fillMonths(); renderGauges(); fillDatalists(); renderList(); if(!editing) showNewFolio(); }
+$("#reload").onclick=loadAll;
+
+/* ---------- configuración ---------- */
+function openCfg(){
+  $("#c-owner").value=cfg?.owner||""; $("#c-repo").value=cfg?.repo||"bitacora-datos"; $("#c-branch").value=cfg?.branch||"main"; $("#c-token").value=cfg?.token||"";
+  $("#c-msg").textContent=""; const d=$("#cfg"); if(!d.open) d.showModal();
+}
+$("#cfgbtn").onclick=openCfg;
+$("#c-close").onclick=()=>$("#cfg").close();
+$("#c-save").onclick=async()=>{
+  const c={owner:$("#c-owner").value.trim(),repo:$("#c-repo").value.trim(),branch:$("#c-branch").value.trim()||"main",token:$("#c-token").value.trim()};
+  if(!c.owner||!c.repo||!c.token){$("#c-msg").textContent="Llena usuario, repositorio y token.";return;}
+  $("#c-msg").textContent="Probando conexión…";
+  try{
+    const repo=await gh("",{},c);
+    if(!repo.private){$("#c-msg").textContent="Ese repositorio es público. Las incidencias deben guardarse en un repositorio privado.";return;}
+    if(repo.permissions&&repo.permissions.push===false){$("#c-msg").textContent="El token puede leer pero no escribir. Dale permiso Contents: Read and write.";return;}
+    cfg=c; try{localStorage.setItem("bitacora_gh",JSON.stringify(c));}catch(e){}
+    $("#cfg").close(); loadAll();
+  }catch(e){ $("#c-msg").textContent=ghErrMsg(e,"No se pudo conectar"); }
+};
+
+loadAll();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+function dbDown(msg){ const n=$("#dbnotice"); n.textContent=msg; n.hidden=false; }
+})();
+</script>
+</body>
+</html>
