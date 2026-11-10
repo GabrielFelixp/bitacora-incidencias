@@ -1,0 +1,14 @@
+{
+  "name": "Bitácora de incidencias de producción",
+  "short_name": "Incidencias",
+  "start_url": "./index.html#nueva",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EEF2F4",
+  "theme_color": "#A85A22",
+  "lang": "es-MX",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
